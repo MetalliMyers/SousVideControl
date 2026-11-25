@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anova Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eaf1f3;--card:#fff;--ink:#12303a;--mute:#5d7882;--line:#d3e0e4;--water:#1a7fb5;--water2:#bfe0ef;--heat:#e8590c;--ok:#1b8a5a;--bad:#c0392b;
+color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1d24;--card:#13303b;--ink:#e6f1f4;--mute:#8fb0ba;--line:#24495a;--water:#4db3e6;--water2:#1b4a61;--heat:#ff8a4c;--ok:#4cc38a;--bad:#ff7b6b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0c1d24;--card:#13303b;--ink:#e6f1f4;--mute:#8fb0ba;--line:#24495a;--water:#4db3e6;--water2:#1b4a61;--heat:#ff8a4c;--ok:#4cc38a;--bad:#ff7b6b;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.45 "Instrument Sans",system-ui,sans-serif;min-height:100vh}
+main{max-width:560px;margin:0 auto;padding:20px 16px 40px;display:grid;gap:14px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+h1{font:700 22px "Bricolage Grotesque",system-ui,sans-serif;margin:0;letter-spacing:-.01em}
+.pill{font-size:13px;padding:4px 11px;border-radius:99px;border:1px solid var(--line);color:var(--mute);background:var(--card)}
+.pill.on{color:var(--ok);border-color:var(--ok)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.num{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-variant-numeric:tabular-nums}
+button{font:600 15px inherit;font-family:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer}
+button:hover{border-color:var(--water)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+button:disabled{opacity:.5;cursor:default}
+.primary{background:var(--water);border-color:var(--water);color:#fff}
+[hidden]{display:none!important}
+#gate{text-align:center;padding:34px 20px}
+#gate p{color:var(--mute);margin:8px auto 18px;max-width:38ch}
+#gate .primary{font-size:17px;padding:13px 26px}
+#msg{margin-top:14px;color:var(--bad);font-size:14px}
+.read{display:grid;grid-template-columns:1fr 64px;gap:18px;align-items:stretch}
+.big{font-size:76px;line-height:1;letter-spacing:-.03em}
+.big small{font-size:28px;color:var(--mute);margin-left:4px}
+.state{margin-top:10px;font-weight:600}
+.state.heat{color:var(--heat)}.state.ok{color:var(--ok)}
+.sub{color:var(--mute);font-size:14px;margin-top:2px}
+.gauge{position:relative;border-radius:32px;background:var(--water2);overflow:hidden;min-height:150px;border:1px solid var(--line)}
+.gauge .fill{position:absolute;left:0;right:0;bottom:0;background:var(--water);transition:height .8s}
+.gauge.run .fill{background:var(--heat)}
+.gauge .mark{position:absolute;left:0;right:0;height:3px;background:var(--ink);transition:bottom .3s}
+h2{font:700 15px "Bricolage Grotesque",system-ui,sans-serif;margin:0 0 12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.step{width:52px;height:52px;font-size:24px;padding:0}
+#tgt{font-size:44px;min-width:130px;text-align:center}
+.tcol{display:flex;flex-direction:column;gap:4px;align-items:center}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.chips button{padding:6px 12px;font-size:14px;border-radius:99px}
+.tin{display:flex;align-items:center;gap:6px}
+input[type=number]{width:74px;font:600 24px "Bricolage Grotesque",system-ui,sans-serif;text-align:center;padding:8px 4px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.left{font-size:34px;margin-top:14px}
+.act{display:grid;grid-template-columns:1fr;gap:10px}
+#go{font-size:20px;padding:18px;border-radius:16px}
+#go.stop{background:var(--bad);border-color:var(--bad)}
+details{color:var(--mute);font-size:13px}
+pre{margin:8px 0 0;max-height:180px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.fill,.mark{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Anova Control</h1><span class="pill" id="pill">Not connected</span></header>
+
+  <section class="card" id="gate">
+    <h2 style="font-size:20px">Connect your cooker</h2>
+    <p>Put the Anova in pairing mode (press its Bluetooth button until it blinks blue), then choose it below. If your system asks for a PIN, enter 0000.</p>
+    <button class="primary" id="connect">Connect to Anova</button>
+    <button id="retry" hidden>Reconnect</button>
+    <div id="msg" role="alert"></div>
+  </section>
+
+  <div id="app" hidden style="display:grid;gap:14px">
+    <section class="card read">
+      <div>
+        <div class="sub">Water temperature</div>
+        <div class="num big"><span id="cur">--</span><small id="u1">°F</small></div>
+        <div class="state" id="state">Off</div>
+        <div class="sub" id="rawst"></div>
+      </div>
+      <div class="gauge" id="gauge" aria-hidden="true"><div class="fill" id="fill" style="height:0"></div><div class="mark" id="mark" style="bottom:50%"></div></div>
+    </section>
+
+    <section class="card">
+      <h2>Target temperature</h2>
+      <div class="row" style="justify-content:space-between">
+        <button class="step" id="tdn" aria-label="Lower target">−</button>
+        <div class="tcol"><div class="num" id="tgt">--</div><div class="sub" id="tsub">Tap − or + (0.5°)</div></div>
+        <button class="step" id="tup" aria-label="Raise target">+</button>
+      </div>
+      <div class="chips" id="tchips"></div>
+    </section>
+
+    <section class="card">
+      <h2>Cook time</h2>
+      <div class="row">
+        <div class="tin"><input type="number" id="hh" min="0" max="99" value="2" aria-label="Hours"><span>h</span></div>
+        <div class="tin"><input type="number" id="mm" min="0" max="59" value="0" aria-label="Minutes"><span>min</span></div>
+        <button id="applyT">Set timer now</button>
+      </div>
+      <div class="chips" id="cchips"></div>
+      <div class="left num" id="left" hidden></div>
+      <div class="sub" id="leftsub"></div>
+    </section>
+
+    <div class="act">
+      <button class="primary" id="go">Start cooking</button>
+      <button id="disc">Disconnect</button>
+    </div>
+  </div>
+
+  <details><summary>Bluetooth log</summary><pre id="log"></pre></details>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const S = { unit:'f', cur:null, set:null, run:false, status:'', left:null, timerRun:false };
+let dev, chr, connected = false, buf = '', pending = null, queue = Promise.resolve(), flushT, pollT, sendT;
+let pendingTarget = null, timerSupported = true, localEnd = null, retries = 0, busy = false;
+
+function log(s){ const p=$('log'); p.textContent += s+'\n'; p.scrollTop=p.scrollHeight; if(p.textContent.length>6000) p.textContent=p.textContent.slice(-4000); }
+function msg(t){ $('msg').textContent = t || ''; }
+
+/* ---------- Bluetooth transport ---------- */
+function txRaw(cmd){
+  const b = new TextEncoder().encode(cmd + '\r');
+  return chr.writeValueWithoutResponse ? chr.writeValueWithoutResponse(b) : chr.writeValue(b);
+}
+// One request at a time: the device has no request IDs, so replies are matched by order.
+function req(cmd, { wait = true, timeout = 4000 } = {}){
+  const p = queue.then(async () => {
+    if (!connected) throw new Error('Not connected');
+    log('→ ' + cmd);
+    if (!wait){ await txRaw(cmd); await sleep(250); return ''; }
+    buf = '';
+    const reply = new Promise((res, rej) => {
+      pending = { res, rej, t: setTimeout(() => { pending = null; rej(new Error('No reply to "' + cmd + '"' + (sawInvalid ? ' (device said Invalid Command)' : ''))); }, timeout) };
+    });
+    try { await txRaw(cmd); } catch(e){ clearTimeout(pending.t); pending = null; throw e; }
+    return reply;
+  });
+  queue = p.catch(() => {});
+  return p;
+}
+let sawInvalid = false;
+function takeLine(line){
+  line = line.trim(); if(!line) return;
+  log('← ' + line);
+  // The cooker can send this spuriously; like the C# library, ignore it and keep waiting for the real reply.
+  if(line === 'Invalid Command'){ sawInvalid = true; return; }
+  if(!pending) return;
+  const p = pending; pending = null; clearTimeout(p.t); p.res(line);
+}
+function onNote(e){
+  buf += new TextDecoder().decode(e.target.value);
+  let i;
+  while((i = buf.search(/[\r\n]/)) >= 0){ const l = buf.slice(0,i); buf = buf.slice(i+1); takeLine(l); }
+  clearTimeout(flushT);
+  if(buf.trim()) flushT = setTimeout(() => { const l = buf; buf = ''; takeLine(l); }, 150); // reply without terminator
+}
+
+/* ---------- Connection ---------- */
+async function connect(){
+  msg('');
+  if(!navigator.bluetooth){ msg('This browser has no Web Bluetooth. Use Chrome or Edge on desktop or Android.'); return; }
+  try{
+    dev = await navigator.bluetooth.requestDevice({ filters:[{ namePrefix:'Anova' }], optionalServices:[0xffe0] });
+    dev.addEventListener('gattserverdisconnected', onDrop);
+    await open();
+  }catch(e){
+    if(e.name === 'NotFoundError') return;
+    msg(e.name === 'SecurityError'
+      ? 'Bluetooth is blocked in this embedded view. Open the page in its own Chrome or Edge tab.'
+      : 'Could not connect: ' + e.message);
+  }
+}
+async function open(){
+  $('pill').textContent = 'Connecting…';
+  try{
+    const server = await dev.gatt.connect();
+    const svc = await server.getPrimaryService(0xffe0);
+    chr = await svc.getCharacteristic(0xffe1);
+    chr.addEventListener('characteristicvaluechanged', onNote);
+    await chr.startNotifications();
+    connected = true; retries = 0;
+    await sleep(400);
+    S.unit = await req('read unit', { timeout: 3000 }).then(r => r.toLowerCase().startsWith('c') ? 'c' : 'f')
+      .catch(() => { log('read unit failed; assuming °F'); return 'f'; });
+    buildChips(); show(true); render(); loop();
+  }catch(e){
+    connected = false; show(false); msg('Could not connect: ' + e.message); $('retry').hidden = false;
+  }
+}
+async function onDrop(){
+  connected = false; clearTimeout(pollT);
+  if(pending){ clearTimeout(pending.t); pending.rej(new Error('Disconnected')); pending = null; }
+  if(retries < 3){ retries++; $('pill').textContent = 'Reconnecting…'; await sleep(1500 * retries); await open(); }
+  else { show(false); msg('Connection lost.'); $('retry').hidden = false; }
+}
+function disconnect(){ retries = 99; connected = false; clearTimeout(pollT); if(dev?.gatt.connected) dev.gatt.disconnect(); show(false); }
+function show(on){
+  $('app').hidden = !on; $('gate').hidden = on;
+  $('pill').textContent = on ? 'Connected' : 'Not connected'; $('pill').classList.toggle('on', on);
+  if(on) msg('');
+}
+
+/* ---------- Polling ---------- */
+async function loop(){
+  if(!connected) return;
+  await refresh();
+  pollT = setTimeout(loop, 1000);
+}
+async function refresh(){
+  try{
+    S.cur = parseFloat(await req('read temp'));
+    S.set = parseFloat(await req('read set temp'));
+    S.status = await req('status');
+    S.run = S.status.toLowerCase() !== 'stopped';
+    if(timerSupported){
+      try{
+        const t = await req('read timer', { timeout: 1500 }), m = t.match(/^(\d+)\s*(\w*)/);
+        if(m){ S.left = +m[1]; S.timerRun = /run/i.test(m[2] || t); }
+      }catch(e){ if(e.message === 'Invalid Command') timerSupported = false; else if(!/No reply/.test(e.message)) throw e; else timerSupported = false; }
+    }
+    render();
+  }catch(e){ log('poll: ' + e.message); }
+}
+
+/* ---------- Controls ---------- */
+const range = () => S.unit === 'c' ? [25, 99] : [77, 210];
+const clamp = v => Math.min(range()[1], Math.max(range()[0], Math.round(v * 2) / 2));
+function nudge(d){
+  const base = pendingTarget ?? S.set; if(base == null || isNaN(base)) return;
+  pendingTarget = clamp(base + d); render();
+  clearTimeout(sendT); sendT = setTimeout(commitTemp, 700);
+}
+function setTarget(v){ pendingTarget = clamp(v); render(); clearTimeout(sendT); sendT = setTimeout(commitTemp, 200); }
+async function commitTemp(){
+  const v = pendingTarget; if(v == null) return;
+  try{ await req('set temp ' + v.toFixed(1)); S.set = v; }catch(e){ msg(e.message); }
+  pendingTarget = null; render();
+}
+const mins = () => Math.max(0, (+$('hh').value || 0) * 60 + (+$('mm').value || 0));
+function setTime(m){ $('hh').value = Math.floor(m/60); $('mm').value = m % 60; }
+async function applyTimer(){
+  const m = mins(); if(m < 1){ log('Timer must be at least 1 minute'); return; }
+  await req('set timer ' + m); await req('start time', { wait:false });
+  localEnd = Date.now() + m * 60000; S.left = m; S.timerRun = true; render();
+}
+async function toggle(){
+  if(busy) return; busy = true; $('go').disabled = true;
+  try{
+    if(S.run){
+      await req('stop');
+      try{ await req('stop time'); }catch(e){}
+      localEnd = null; S.timerRun = false;
+    }else{
+      if(mins() >= 1) await applyTimer();
+      await req('start');
+    }
+    await refresh();
+  }catch(e){ msg(e.message); }
+  busy = false; $('go').disabled = false;
+}
+
+/* ---------- Rendering ---------- */
+function fmtLeft(m){ const h = Math.floor(m/60); return h + ':' + String(m % 60).padStart(2,'0'); }
+function render(){
+  const u = '°' + S.unit.toUpperCase(), tgt = pendingTarget ?? S.set;
+  $('u1').textContent = u;
+  $('cur').textContent = S.cur == null || isNaN(S.cur) ? '--' : S.cur.toFixed(1);
+  $('tgt').textContent = tgt == null || isNaN(tgt) ? '--' : tgt.toFixed(1) + u;
+  const tol = S.unit === 'c' ? 0.3 : 0.5, atT = S.run && Math.abs(S.cur - S.set) <= tol;
+  const st = $('state');
+  st.textContent = !S.run ? 'Off' : atT ? 'At temperature' : S.cur < S.set ? 'Heating' : 'Holding';
+  st.className = 'state ' + (!S.run ? '' : atT ? 'ok' : 'heat');
+  $('rawst').textContent = S.status ? 'Device status: ' + S.status : '';
+  const [lo, hi] = range(), pc = v => Math.min(100, Math.max(0, (v - lo) / (hi - lo) * 100));
+  $('fill').style.height = pc(S.cur ?? lo) + '%'; $('mark').style.bottom = 'calc(' + pc(tgt ?? lo) + '% - 1px)';
+  $('gauge').classList.toggle('run', S.run);
+  const go = $('go'); go.textContent = S.run ? 'Stop cooking' : 'Start cooking'; go.className = S.run ? 'stop primary' : 'primary';
+  let left = null;
+  if(timerSupported && S.left != null) left = S.timerRun ? S.left : null;
+  else if(localEnd) left = Math.max(0, Math.ceil((localEnd - Date.now()) / 60000));
+  $('left').hidden = left == null;
+  if(left != null) $('left').textContent = fmtLeft(left) + ' left';
+  $('leftsub').textContent = left == null ? (S.run ? 'No timer running. The cooker will hold until you stop it.' : 'Starting will also start this timer. Set it to 0 for no timer.') : '';
+  $('tsub').textContent = pendingTarget != null ? 'Sending…' : 'Tap − or + (0.5°)';
+}
+function buildChips(){
+  const f = S.unit === 'f';
+  const temps = f ? [[129,'Steak 129°'],[135,'Medium 135°'],[145,'Pork 145°'],[165,'Chicken 165°']] : [[54,'Steak 54°'],[57,'Medium 57°'],[63,'Pork 63°'],[74,'Chicken 74°']];
+  $('tchips').replaceChildren(...temps.map(([v,l]) => Object.assign(document.createElement('button'), { textContent:l, onclick:() => setTarget(v) })));
+  $('cchips').replaceChildren(...[[30,'30 min'],[60,'1 h'],[120,'2 h'],[240,'4 h'],[480,'8 h'],[1440,'24 h'],[0,'No timer']].map(([m,l]) =>
+    Object.assign(document.createElement('button'), { textContent:l, onclick:() => setTime(m) })));
+}
+
+$('connect').onclick = connect; $('retry').onclick = () => { retries = 0; open(); };
+$('disc').onclick = disconnect; $('go').onclick = toggle; $('applyT').onclick = () => applyTimer().catch(e => msg(e.message));
+$('tdn').onclick = () => nudge(-0.5); $('tup').onclick = () => nudge(0.5);
+setInterval(() => { if(connected && localEnd) render(); }, 15000);
+if(!navigator.bluetooth) msg('This browser has no Web Bluetooth. Use Chrome or Edge on desktop or Android.');
+</script>
+</body>
+</html>
